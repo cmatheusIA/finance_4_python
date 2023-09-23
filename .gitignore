@@ -1,0 +1,6 @@
+.venv
+projeto/src/ingestao/driver
+aulas
+chromedriver
+.vscode
+projeto/src/utils/keys.json
