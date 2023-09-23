@@ -23,7 +23,7 @@ class Crawler:
         diretorio_avo = os.path.abspath(os.path.join(self.diretorio_Atual, "../.."))
         caminho_relativo = os.path.join('utils', 'keys.json')
 
-        # Construir o caminho relativo para 'src/utils/keys.json'
+        
         caminho_chave_json = os.path.join(diretorio_avo, caminho_relativo)
         with open(caminho_chave_json) as f:
             api_keys = json.load(f)
@@ -46,9 +46,7 @@ class Crawler:
             chrome_options.add_argument("--headless")
             chrome_options.add_argument("--no-sandbox")
 
-            # Set path to chromedriver as per your configuration
-            #homedir = os.path.expanduser("~")
-            #webdriver_service = Service(f"{homedir}/chromedriver/stable/chromedriver")
+
             service= Service(self.path_driver)
             driver = webdriver.Chrome(service=service, options=chrome_options)
 
@@ -73,8 +71,8 @@ class Crawler:
 
         # Subir dois níveis para o diretório "avo"
         diretorio_avo = os.path.abspath(os.path.join(self.diretorio_Atual, "../.."))
-        pasta_data = os.path.join(diretorio_avo,'data')
-        subpasta = os.path.join(pasta_data, f'BR/{self.indice}')
+        pasta_data = os.path.join(diretorio_avo,'data/BR')
+        subpasta = os.path.join(pasta_data, f'{self.indice}')
         subpasta = os.path.join(pasta_data, str(self.indice))
 
         # Verifica se a subpasta existe e a cria se necessário
