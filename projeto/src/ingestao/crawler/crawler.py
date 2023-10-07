@@ -1,4 +1,5 @@
 from time import sleep
+from typing import List, Tuple
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -8,6 +9,7 @@ import io
 import requests
 import json
 import os
+import investpy as invpy
 
 class Crawler:
     def __init__(self,indice=None) -> None:
@@ -30,7 +32,32 @@ class Crawler:
         #alpha_vantage_key = api_keys['alpha_vantage']
         return api_keys
 
-    def robot(self, sleep_num=0, driver=None,indice=None):
+    def robot_indices(self, sleep_num=0, driver_flag=False,indice=None):
+        """
+            This function performs the following tasks:
+            
+            * Prints information messages to the console.
+            * Sets the index number for the current run.
+            * Builds the URL for the index page based on the index number.
+            * Downloads the HTML content of the index page using WebDriver.
+            * Enters the sector name into a search box on the page.
+            * Clicks the 'Download' button on the page.
+            * Waits for the download to complete.
+            * Moves the downloaded file to a directory based on the index number.
+            
+            Parameters:
+            -----------
+            sleep_num: int (optional)
+                The number of seconds to wait between actions. Default is 0.
+            driver_flag: bool (optional)
+                Whether to use headless mode with WebDriver. Default is False.
+            indice: int (optional)
+                The index number for the current run. If not provided, it will be set to the value of `self.indice`.
+            
+            Returns:
+            -------
+            None
+        """
         print("[INFO] Iniciando robo de coleta")
         if self.indice==None:
             self.indice=indice
@@ -39,9 +66,10 @@ class Crawler:
         print(f"[INFO] Dados coletados do indice {self.indice}")
         print(f"[INFO] Link onde vamos fazer download {url}")
 
-
-        if driver==None:
-            print("[INFO] Configurando  e iniciando  webdriver")
+        print("[INFO] Configurando  e iniciando  webdriver")
+        if driver_flag==True:
+            driver = webdriver.Chrome()
+        else:
             chrome_options = Options()
             chrome_options.add_argument("--headless")
             chrome_options.add_argument("--no-sandbox")
@@ -49,6 +77,7 @@ class Crawler:
 
             service= Service(self.path_driver)
             driver = webdriver.Chrome(service=service, options=chrome_options)
+            
 
         print(f"[INFO] acesando o {url}")
         driver.get(url)
@@ -78,7 +107,6 @@ class Crawler:
         # Verifica se a subpasta existe e a cria se necessário
         print('[INFO] Checando se o diretorio ja existe')
         if not os.path.exists(subpasta):
-            #os.chmod(subpasta, 0o777)
             os.makedirs(subpasta)
 
         # Move o arquivo CSV para a subpasta
@@ -90,12 +118,20 @@ class Crawler:
 
     
     def robot_usa_tickets(self):
+        """
+            Method that retrieves all daily stock prices for the US stock market,
+            over the last 20 years using Alpha Vantage API.
+
+            Returns:
+                None: The function does not return anything, but instead exports a JSON file 
+                containing the stock data to a folder named "USA" in the current working directory.
+        """
         print("[INFO] Iniciando robo de coleta")
         print("[INFO] Carregando keys para usar a api alpha vantage")
         _keys = self.__get_keys()
         key = _keys['alpha_vantage']
 
-        url = f'https://www.alphavantage.co/query?function=LISTING_STATUS&state=active&apikey={key}'
+        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&state=active&apikey={key}'
 
         print("[INFO] Iniciando requisição")
         try:
@@ -117,4 +153,26 @@ class Crawler:
         df.to_json(f'{subpasta}/tickers.json',orient="records", default_handler=str)
 
 
+    def get_symbol_by_country(self, country: str) -> Tuple[pd.DataFrame, List[str]]:
+        """
+        Retrieves the symbols of stocks in a given country.
         
+        Parameters
+        ----------
+        country : str
+            The country whose stock symbols are desired.
+        
+        Returns
+        -------
+        stocks : DataFrame
+            A DataFrame with columns 'name', 'full_name', and 'symbol' for each stock in the country.
+            The 'symbol' column will be appended with '.SA' for convenience.
+        list_of_symbols : List[str]
+            A list of the unique stock symbols found in the country.
+        """
+        stocks = invpy.stocks.get_stocks(country=country)
+        stocks = stocks[['name', 'full_name', 'symbol']]
+        stocks['symbol'] = stocks['symbol'] + '.SA'
+        list_of_symbols = stocks['symbol'].tolist()
+        
+        return stocks, list_of_symbols
