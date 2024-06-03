@@ -10,6 +10,13 @@ import requests
 import json
 import os
 import investpy as invpy
+from bs4 import BeautifulSoup as bs
+
+# Definindo os headers com um User-Agent
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 \
+    (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+}
 
 class Crawler:
     def __init__(self,indice=None) -> None:
@@ -115,6 +122,7 @@ class Crawler:
         novo_caminho = os.path.join(subpasta, arquivo_csv)
         os.rename(arquivo_csv, novo_caminho)
         print(f'[INFO] Arquivos salvos no caminho = {novo_caminho}')
+        return arquivo_csv
 
     
     def robot_usa_tickets(self):
@@ -151,6 +159,11 @@ class Crawler:
         print("[INFO] Salvando os dados")
         df = pd.read_csv(io.StringIO(response.text))
         df.to_json(f'{subpasta}/tickers.json',orient="records", default_handler=str)
+    
+
+
+    def get_countries(self):
+        return invpy.stocks.get_stock_countries()
 
 
     def get_symbol_by_country(self, country: str) -> Tuple[pd.DataFrame, List[str]]:
@@ -176,3 +189,25 @@ class Crawler:
         list_of_symbols = stocks['symbol'].tolist()
         
         return stocks, list_of_symbols
+    
+    def getFIIS(self) -> Tuple[pd.DataFrame, List[str]]:
+        url = "https://fiis.com.br/lista-de-fundos-imobiliarios/"
+        page = requests.get(url, headers=headers)
+        soup = bs(page.content, "html.parser")
+        divs = soup.find_all("div" ,attrs= {"class":"tickerBox"} )
+        fiis = []
+        for fii in divs:
+
+            fiis.append(
+                {
+                    "symbol" : fii.find("div" ,attrs = {"class":"tickerBox__title"}).text,
+                    "type" : fii.find("span" ,attrs= {"class":"tickerBox__type"}).text,
+                    "desc" : fii.find("div" ,attrs= {"class":"tickerBox__desc"}).text
+                }
+            )
+        df = pd.DataFrame(fiis)
+        df["type"] = df["type"].apply(lambda x: str(x).replace(":",""))
+        df_fii = df.iloc[5:]
+        df_fii['symbol']=df_fii['symbol'] + '.SA'
+        list_of_symbols = df_fii['symbol'].tolist()
+        return df_fii, list_of_symbols
